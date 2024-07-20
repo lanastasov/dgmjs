@@ -1,16 +1,3 @@
-/*
- * Copyright (c) 2022 MKLabs. All rights reserved.
- *
- * NOTICE:  All information contained herein is, and remains the
- * property of MKLabs. The intellectual and technical concepts
- * contained herein are proprietary to MKLabs and may be covered
- * by Republic of Korea and Foreign Patents, patents in process,
- * and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material
- * is strictly forbidden unless prior written permission is obtained
- * from MKLabs (niklaus.lee@gmail.com).
- */
-
 import React from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,7 +9,7 @@ import { FillPanel } from "./fill-panel";
 import { ControlPanel } from "./control-panel";
 import { StrokePanel } from "./stroke-panel";
 import { TagPanel } from "./tag-panel";
-import { Line, Box, Freehand } from "@dgmjs/core";
+import { Line, Box, Freehand, Doc } from "@dgmjs/core";
 import { LinePanel } from "./line-panel";
 import { Empty } from "../common/empty";
 import { PrototypePanel } from "./prototype-panel";
@@ -31,8 +18,14 @@ import { AlignmentPanel } from "./alignment-panel";
 import { CommonPanel } from "./shape-panel";
 import { ShapeEditorProps } from "@/types";
 import { FreehandPanel } from "./freehand-panel";
+import { ExtraPanel } from "./extra-panel";
 
-export const PropertySidebar: React.FC<ShapeEditorProps> = ({
+export interface PropertySidebarProps extends ShapeEditorProps {
+  doc: Doc;
+}
+
+export const PropertySidebar: React.FC<PropertySidebarProps> = ({
+  doc,
   shapes,
   onChange,
 }) => {
@@ -79,6 +72,7 @@ export const PropertySidebar: React.FC<ShapeEditorProps> = ({
               {shapes.length === 1 && (
                 <>
                   <PrototypePanel shapes={shapes} onChange={onChange} />
+                  <ExtraPanel doc={doc} shapes={shapes} onChange={onChange} />
                   <ExtendedPropertyPanel shapes={shapes} onChange={onChange} />
                   <ConstraintPanel shapes={shapes} onChange={onChange} />
                   <ScriptPanel shapes={shapes} onChange={onChange} />

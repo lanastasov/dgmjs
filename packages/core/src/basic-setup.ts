@@ -1,16 +1,3 @@
-/*
- * Copyright (c) 2023 MKLabs. All rights reserved.
- *
- * NOTICE:  All information contained herein is, and remains the
- * property of MKLabs. The intellectual and technical concepts
- * contained herein are proprietary to MKLabs and may be covered
- * by Republic of Korea and Foreign Patents, patents in process,
- * and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material
- * is strictly forbidden unless prior written permission is obtained
- * from MKLabs (niklaus.lee@gmail.com).
- */
-
 import { type EditorOptions } from "./editor";
 import {
   SelectHandler,
@@ -24,6 +11,7 @@ import {
   HighlighterFactoryHandler,
   ImageFactoryHandler,
   EmbedFactoryHandler,
+  EraserHandler,
 } from "./handlers";
 import { FrameFactoryHandler } from "./handlers/frame-handler";
 
@@ -34,6 +22,7 @@ export function basicSetup(
     handlers: [
       new SelectHandler("Select"),
       new HandHandler("Hand", { defaultLock: true }),
+      new EraserHandler("Eraser", { defaultLock: true }),
       new RectangleFactoryHandler("Rectangle", { defaultLock: false }),
       new EllipseFactoryHandler("Ellipse", { defaultLock: false }),
       new TextFactoryHandler("Text", { defaultLock: false }),
@@ -55,10 +44,10 @@ export function basicSetup(
       "mod-v": (editor) => editor.actions.paste(),
       delete: (editor) => editor.actions.remove(),
       "mod-a": (editor) => editor.selection.selectAll(),
-      "mod-[": (editor) => editor.actions.bringForward(),
-      "mod-]": (editor) => editor.actions.sendBackward(),
-      "mod-alt-[": (editor) => editor.actions.bringToFront(),
-      "mod-alt-]": (editor) => editor.actions.sendToBack(),
+      "]": (editor) => editor.actions.bringForward(),
+      "[": (editor) => editor.actions.sendBackward(),
+      "mod-]": (editor) => editor.actions.bringToFront(),
+      "mod-[": (editor) => editor.actions.sendToBack(),
       "mod-g": (editor) => editor.actions.group(),
       "mod-shift-g": (editor) => editor.actions.ungroup(),
       up: (editor) => editor.actions.move(0, -editor.getGridSize()[1]),

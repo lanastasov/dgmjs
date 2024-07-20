@@ -1,16 +1,3 @@
-/*
- * Copyright (c) 2022 MKLabs. All rights reserved.
- *
- * NOTICE:  All information contained herein is, and remains the
- * property of MKLabs. The intellectual and technical concepts
- * contained herein are proprietary to MKLabs and may be covered
- * by Republic of Korea and Foreign Patents, patents in process,
- * and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material
- * is strictly forbidden unless prior written permission is obtained
- * from MKLabs (niklaus.lee@gmail.com).
- */
-
 import type { Canvas, CanvasPointerEvent } from "../graphics/graphics";
 import * as geometry from "../graphics/geometry";
 import { Shape, Box, Path } from "../shapes";
@@ -51,6 +38,7 @@ export class BoxRotateController extends Controller {
     options?: Partial<BoxRotateControllerOptions>
   ) {
     super(manipulator);
+    this.hasHandle = true;
     this.snap = new Snap();
     this.options = {
       position: ControllerPosition.LEFT_TOP,
@@ -66,7 +54,8 @@ export class BoxRotateController extends Controller {
     let value =
       editor.selection.size() === 1 &&
       editor.selection.isSelected(shape) &&
-      shape.rotatable;
+      shape.rotatable &&
+      !editor.pointerDownUnselectedShape;
     // don't allow rotating a single line
     if (shape instanceof Path && shape.path.length === 2) value = false;
     // don't allow resizing when path editable

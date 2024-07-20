@@ -1,22 +1,8 @@
-/*
- * Copyright (c) 2023 MKLabs. All rights reserved.
- *
- * NOTICE:  All information contained herein is, and remains the
- * property of MKLabs. The intellectual and technical concepts
- * contained herein are proprietary to MKLabs and may be covered
- * by Republic of Korea and Foreign Patents, patents in process,
- * and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material
- * is strictly forbidden unless prior written permission is obtained
- * from MKLabs (niklaus.lee@gmail.com).
- */
-
 import type { Editor } from "./editor";
 import { Box, Group, type Shape, type ShapeProps, Page, Path } from "./shapes";
 import * as geometry from "./graphics/geometry";
 import { Obj, filterDescendants } from "./core/obj";
 import { deserialize, serialize } from "./core/serialize";
-import { extractTextFromShapes } from "./utils/text-utils";
 import {
   addPage,
   addShape,
@@ -32,10 +18,6 @@ import {
   resolveAllConstraints,
   sendBackward,
   sendToBack,
-  setFontColor,
-  setFontFamily,
-  setFontSize,
-  setHorzAlign,
 } from "./macro";
 
 /**
@@ -152,26 +134,19 @@ export class Actions {
       this.editor.transform.transact((tx) => {
         objs = objs ?? this.editor.selection.getShapes();
         for (let key in values) {
-          if (key === "horzAlign") {
-            objs.forEach((s) => {
-              if (s instanceof Box) setHorzAlign(tx, s, (values as any)[key]);
-            });
-          } else if (key === "fontSize") {
-            objs.forEach((s) => {
-              if (s instanceof Box) setFontSize(tx, s, (values as any)[key]);
-            });
-          } else if (key === "fontFamily") {
-            objs.forEach((s) => {
-              if (s instanceof Box) setFontFamily(tx, s, (values as any)[key]);
-            });
-          } else if (key === "fontColor") {
-            objs.forEach((s) => {
-              if (s instanceof Box) setFontColor(tx, s, (values as any)[key]);
-            });
-          } else {
-            objs.forEach((s) => {
-              tx.assign(s, key, (values as any)[key]);
-            });
+          switch (key) {
+            case "reference": {
+              objs.forEach((s) => {
+                if (s.hasOwnProperty(key))
+                  tx.assignRef(s, key, (values as any)[key]);
+              });
+              break;
+            }
+            default:
+              objs.forEach((s) => {
+                if (s.hasOwnProperty(key))
+                  tx.assign(s, key, (values as any)[key]);
+              });
           }
         }
         resolveAllConstraints(tx, page, this.editor.canvas);
@@ -205,7 +180,6 @@ export class Actions {
     const clipboard = this.editor.clipboard;
     await clipboard.write({
       objs: shapes,
-      text: extractTextFromShapes(shapes),
     });
   }
 
@@ -219,7 +193,6 @@ export class Actions {
       const clipboard = this.editor.clipboard;
       await clipboard.write({
         objs: shapes,
-        text: extractTextFromShapes(shapes),
       });
       this.editor.transform.startAction("cut");
       this.editor.transform.transact((tx) => {

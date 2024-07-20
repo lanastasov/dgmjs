@@ -1,18 +1,5 @@
-/*
- * Copyright (c) 2022 MKLabs. All rights reserved.
- *
- * NOTICE:  All information contained herein is, and remains the
- * property of MKLabs. The intellectual and technical concepts
- * contained herein are proprietary to MKLabs and may be covered
- * by Republic of Korea and Foreign Patents, patents in process,
- * and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material
- * is strictly forbidden unless prior written permission is obtained
- * from MKLabs (niklaus.lee@gmail.com).
- */
-
 import { z } from "zod";
-import { constraintManager, Doc, Page, Shape } from "../shapes";
+import { constraintManager, Page, Shape } from "../shapes";
 import type { Canvas } from "../graphics/graphics";
 import { Transaction } from "../core/transaction";
 import { moveShapes, resizeShape } from "../macro";
@@ -66,7 +53,7 @@ function constraint(
 ) {
   let changed = false;
   const parent = shape.parent;
-  if (parent instanceof Shape && !(parent instanceof Doc)) {
+  if (parent instanceof Shape && !(parent instanceof Page)) {
     let horz = args.horz;
     let vert = args.vert;
     const l = parent.left;

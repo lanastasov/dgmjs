@@ -1,16 +1,3 @@
-/*
- * Copyright (c) 2022 MKLabs. All rights reserved.
- *
- * NOTICE:  All information contained herein is, and remains the
- * property of MKLabs. The intellectual and technical concepts
- * contained herein are proprietary to MKLabs and may be covered
- * by Republic of Korea and Foreign Patents, patents in process,
- * and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material
- * is strictly forbidden unless prior written permission is obtained
- * from MKLabs (niklaus.lee@gmail.com).
- */
-
 import { CanvasPointerEvent } from "../graphics/graphics";
 import { Shape, Box, Movable, Page, Path } from "../shapes";
 import { Controller, Editor, Manipulator, manipulatorManager } from "../editor";
@@ -30,6 +17,7 @@ export class BoxMoveController extends Controller {
 
   constructor(manipulator: Manipulator) {
     super(manipulator);
+    this.hasHandle = false;
     this.snap = new Snap();
   }
 
@@ -82,8 +70,10 @@ export class BoxMoveController extends Controller {
     )
       this.dyStepGCS = 0;
 
-    // determine container
-    // (container shouldn't be itself of a descendant of target)
+    // return if no change
+    if (this.dxStepGCS === 0 && this.dyStepGCS === 0) return;
+
+    // determine container (shouldn't be itself of a descendant of target)
     const canvas = editor.canvas;
     let p2 = targetShape.localCoordTransform(canvas, this.dragPoint, false);
     let container = editor.getCurrentPage()?.getShapeAt(canvas, p2, [shape]);

@@ -99,6 +99,7 @@ function App() {
   const handleActiveHandlerChange = (handlerId: string) => {
     demoStore.setActiveHandler(handlerId);
     window.editor?.selection.deselectAll();
+    window.editor?.focus();
   };
 
   const handleAction = () => {
@@ -139,6 +140,11 @@ function App() {
         darkMode={demoStore.darkMode}
         options={{
           keymapEventTarget: window,
+          imageResize: {
+            quality: 1,
+            maxWidth: 2800,
+            maxHeight: 2800,
+          },
         }}
         plugins={[new YjsDocSyncPlugin(), new YjsUserPresencePlugin()]}
         showGrid={true}
@@ -168,6 +174,7 @@ function App() {
         }}
       />
       <PropertySidebar
+        doc={demoStore.doc!}
         shapes={demoStore.selection}
         onChange={handleValuesChange}
       />

@@ -1,16 +1,3 @@
-/*
- * Copyright (c) 2022 MKLabs. All rights reserved.
- *
- * NOTICE:  All information contained herein is, and remains the
- * property of MKLabs. The intellectual and technical concepts
- * contained herein are proprietary to MKLabs and may be covered
- * by Republic of Korea and Foreign Patents, patents in process,
- * and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material
- * is strictly forbidden unless prior written permission is obtained
- * from MKLabs (niklaus.lee@gmail.com).
- */
-
 import type { Canvas, CanvasPointerEvent } from "../graphics/graphics";
 import { Shape, Box, Connector } from "../shapes";
 import { Controller, Editor, Manipulator } from "../editor";
@@ -54,6 +41,7 @@ export class BoxCreateConnectorController extends Controller {
     options?: Partial<BoxCreateConnectorControllerOptions>
   ) {
     super(manipulator);
+    this.hasHandle = true;
     this.snap = new Snap();
     this.connector = null;
     this.options = {
@@ -70,7 +58,8 @@ export class BoxCreateConnectorController extends Controller {
     let value =
       editor.selection.size() === 1 &&
       editor.selection.isSelected(shape) &&
-      shape.connectable;
+      shape.connectable &&
+      !editor.pointerDownUnselectedShape;
     return value;
   }
 
@@ -155,7 +144,11 @@ export class BoxCreateConnectorController extends Controller {
    * Finalize shape by ghost
    */
   finalize(editor: Editor, shape: Box) {
-    editor.transform.endAction();
+    if (this.dx === 0 && this.dy === 0) {
+      editor.transform.cancelAction();
+    } else {
+      editor.transform.endAction();
+    }
   }
 
   /**

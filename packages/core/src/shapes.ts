@@ -1,16 +1,3 @@
-/*
- * Copyright (c) 2022 MKLabs. All rights reserved.
- *
- * NOTICE:  All information contained herein is, and remains the
- * property of MKLabs. The intellectual and technical concepts
- * contained herein are proprietary to MKLabs and may be covered
- * by Republic of Korea and Foreign Patents, patents in process,
- * and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material
- * is strictly forbidden unless prior written permission is obtained
- * from MKLabs (niklaus.lee@gmail.com).
- */
-
 import { assert } from "./std/assert";
 import { FillStyle, Canvas } from "./graphics/graphics";
 import {
@@ -303,6 +290,11 @@ export class Shape extends Obj {
   link: string;
 
   /**
+   * A reference to shape
+   */
+  reference: Shape | null;
+
+  /**
    * Shape's constraints
    */
   constraints: Constraint[];
@@ -370,6 +362,7 @@ export class Shape extends Obj {
     this.opacity = 1;
     this.roughness = 0;
     this.link = "";
+    this.reference = null;
     this.constraints = [];
     this.properties = [];
     this.scripts = [];
@@ -415,6 +408,7 @@ export class Shape extends Obj {
     json.opacity = this.opacity;
     json.roughness = this.roughness;
     json.link = this.link;
+    json.reference = this.reference ? this.reference.id : null;
     json.constraints = structuredClone(this.constraints);
     json.properties = structuredClone(this.properties);
     json.scripts = structuredClone(this.scripts);
@@ -456,9 +450,21 @@ export class Shape extends Obj {
     this.opacity = json.opacity ?? this.opacity;
     this.roughness = json.roughness ?? this.roughness;
     this.link = json.link ?? this.link;
+    this.reference = json.reference ?? this.reference;
     this.constraints = json.constraints ?? this.constraints;
     this.properties = json.properties ?? this.properties;
     this.scripts = json.scripts ?? this.scripts;
+  }
+
+  resolveRefs(idMap: Record<string, Shape>, nullIfNotFound: boolean = false) {
+    super.resolveRefs(idMap, nullIfNotFound);
+    if (typeof this.reference === "string") {
+      if (idMap[this.reference]) {
+        this.reference = idMap[this.reference];
+      } else if (nullIfNotFound) {
+        this.reference = null;
+      }
+    }
   }
 
   get right(): number {
@@ -2053,7 +2059,7 @@ export class Connector extends Line {
   }
 
   resolveRefs(idMap: Record<string, Shape>, nullIfNotFound: boolean = false) {
-    super.resolveRefs(idMap);
+    super.resolveRefs(idMap, nullIfNotFound);
     if (typeof this.tail === "string") {
       if (idMap[this.tail]) {
         this.tail = idMap[this.tail];
@@ -2095,8 +2101,8 @@ export class Connector extends Line {
         this.head!.localCoordTransform(null as any, p, true)
       );
       return geometry.getPointOnPath(pathGCS, this.headAnchor[0]);
-    } else if (this.head) {
-      const box = this.head?.getBoundingRect();
+    } else if (this.head instanceof Shape) {
+      const box = this.head.getBoundingRect();
       const w = geometry.width(box);
       const h = geometry.height(box);
       return [
@@ -2116,7 +2122,7 @@ export class Connector extends Line {
         this.tail!.localCoordTransform(null as any, p, true)
       );
       return geometry.getPointOnPath(pathGCS, this.tailAnchor[0]);
-    } else if (this.tail) {
+    } else if (this.tail instanceof Shape) {
       const box = this.tail.getBoundingRect();
       const w = geometry.width(box);
       const h = geometry.height(box);

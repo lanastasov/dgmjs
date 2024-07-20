@@ -1,18 +1,5 @@
-/*
- * Copyright (c) 2022 MKLabs. All rights reserved.
- *
- * NOTICE:  All information contained herein is, and remains the
- * property of MKLabs. The intellectual and technical concepts
- * contained herein are proprietary to MKLabs and may be covered
- * by Republic of Korea and Foreign Patents, patents in process,
- * and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material
- * is strictly forbidden unless prior written permission is obtained
- * from MKLabs (niklaus.lee@gmail.com).
- */
-
 import { z } from "zod";
-import { constraintManager, Box, Shape, Page, Doc } from "../shapes";
+import { constraintManager, Box, Shape, Page } from "../shapes";
 import * as geometry from "../graphics/geometry";
 import { Canvas } from "../graphics/graphics";
 import { Transaction } from "../core/transaction";
@@ -34,9 +21,14 @@ function constraint(
   args: z.infer<typeof schema>
 ) {
   let changed = false;
-  if (shape instanceof Box && !(shape.parent instanceof Doc)) {
+  const parent = shape.parent;
+  if (
+    shape instanceof Box &&
+    parent instanceof Shape &&
+    !(parent instanceof Page)
+  ) {
     const anchorPoint = geometry.getPointOnPath(
-      (shape.parent as Shape).getOutline() ?? [],
+      parent.getOutline() ?? [],
       shape.anchorPosition
     );
     const shapeCenter = geometry.rotate(

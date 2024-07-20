@@ -1,16 +1,3 @@
-/*
- * Copyright (c) 2022 MKLabs. All rights reserved.
- *
- * NOTICE:  All information contained herein is, and remains the
- * property of MKLabs. The intellectual and technical concepts
- * contained herein are proprietary to MKLabs and may be covered
- * by Republic of Korea and Foreign Patents, patents in process,
- * and are protected by trade secret or copyright law.
- * Dissemination of this information or reproduction of this material
- * is strictly forbidden unless prior written permission is obtained
- * from MKLabs (niklaus.lee@gmail.com).
- */
-
 import { Canvas, CanvasPointerEvent, FillStyle } from "./graphics/graphics";
 import { Connector, Doc, Shape, Page, shapeInstantiator } from "./shapes";
 import { Cursor, Color, Mouse, CONTROL_POINT_APOTHEM } from "./graphics/const";
@@ -37,6 +24,11 @@ export interface EditorOptions {
   allowAutoScroll: boolean;
   allowCreateTextOnCanvas: boolean;
   allowCreateTextOnConnector: boolean;
+  imageResize: {
+    quality?: number;
+    maxWidth?: number;
+    maxHeight?: number;
+  };
   onReady: (editor: Editor) => void;
 }
 
@@ -316,6 +308,25 @@ export class Editor {
    * @private
    */
   leftButtonDown: boolean;
+
+  /**
+   * @private
+   */
+  midButtonDown: boolean;
+
+  /**
+   * @private
+   *
+   * This indicates that the user has mouse pointer down on an unselected shape.
+   * This is required to deactivate controllers (box-sizing) before the shape is
+   * clearly selected after mouse pointer up.
+   *
+   * When the shape is too small, it is so hard to move the shape because the
+   * box-sizing controller is activated. This flag is used to prevent this issue.
+   * (See issue #169)
+   */
+  pointerDownUnselectedShape: boolean;
+
   private downX: number;
   private downY: number;
   private isPinching: boolean;
@@ -339,6 +350,11 @@ export class Editor {
       allowAutoScroll: true,
       allowCreateTextOnCanvas: true,
       allowCreateTextOnConnector: true,
+      imageResize: {
+        quality: 0.7,
+        maxWidth: 800,
+        maxHeight: 800,
+      },
       onReady: () => {},
       ...options,
     };
@@ -405,13 +421,15 @@ export class Editor {
     this.handlers = {};
     this.activeHandler = null;
     this.activeHandlerLock = false;
-    this.leftButtonDown = false; // To check mouse left button down in mouse move event.
+    this.leftButtonDown = false;
+    this.midButtonDown = false;
     this.downX = 0;
     this.downY = 0;
     this.isPinching = false;
     this.initialScale = 1;
     this.initialDistance = 0;
     this.touchPoint = [-1, -1];
+    this.pointerDownUnselectedShape = false;
     this.initializeState();
     this.initializeHandlers();
     this.initializeCanvas();
@@ -465,18 +483,16 @@ export class Editor {
       if (this.enabled) {
         this.focus();
         if (e.button === Mouse.BUTTON1) this.leftButtonDown = true;
+        if (e.button === Mouse.BUTTON2) this.midButtonDown = true;
         const event = createPointerEvent(this.canvasElement, this.canvas, e);
         this.autoScroller.pointerDown(event);
-        if (event.ModDown) {
+        if (this.midButtonDown || (event.ModDown && this.leftButtonDown)) {
           // viewpoint move
-          // TODO: viewpoint move need to be moved to Handler (SelectHandler or CreateHandler)
-          if (this.leftButtonDown) {
-            this.setCursor(Cursor.MOVE);
-            this.downX = e.offsetX;
-            this.downY = e.offsetY;
-          }
+          this.setCursor(Cursor.GRABBING);
+          this.downX = e.offsetX;
+          this.downY = e.offsetY;
         } else if (!this.isPinching && this.activeHandler) {
-          // 모바일에서는 pointerMove 발생하지 않으므로, pointerMove 한번 호출해준다.
+          // In mobile devices pointerMove is not triggered, so need to trigger pointerMove once
           this.activeHandler.pointerMove(this, event);
           this.activeHandler.pointerDown(this, event);
         }
@@ -490,15 +506,13 @@ export class Editor {
         const event = createPointerEvent(this.canvasElement, this.canvas, e);
         event.leftButtonDown = this.leftButtonDown;
         this.autoScroller.pointerMove(event);
-        if (event.ModDown) {
+        if (this.midButtonDown || (event.ModDown && this.leftButtonDown)) {
           // viewpoint move
-          if (this.leftButtonDown) {
-            let dx = (e.offsetX - this.downX) / this.getScale();
-            let dy = (e.offsetY - this.downY) / this.getScale();
-            this.moveOrigin(dx, dy);
-            this.downX = e.offsetX;
-            this.downY = e.offsetY;
-          }
+          let dx = (e.offsetX - this.downX) / this.getScale();
+          let dy = (e.offsetY - this.downY) / this.getScale();
+          this.moveOrigin(dx, dy);
+          this.downX = e.offsetX;
+          this.downY = e.offsetY;
         } else if (!this.isPinching && this.activeHandler) {
           this.activeHandler.pointerMove(this, event);
         }
@@ -509,17 +523,18 @@ export class Editor {
     // pointer up  handler
     this.canvasElement.addEventListener("pointerup", (e) => {
       if (this.enabled) {
-        if (e.button === Mouse.BUTTON1) this.leftButtonDown = false;
         const event = createPointerEvent(this.canvasElement, this.canvas, e);
-        this.autoScroller.pointerUp(event);
-        if (event.ModDown) {
-          // viewpoint move
+        if (this.midButtonDown || (event.ModDown && this.leftButtonDown)) {
           this.setCursor(Cursor.DEFAULT);
           this.downX = 0;
           this.downY = 0;
-        } else if (!this.isPinching && this.activeHandler) {
+        }
+        this.autoScroller.pointerUp(event);
+        if (!this.isPinching && this.activeHandler) {
           this.activeHandler.pointerUp(this, event);
         }
+        if (e.button === Mouse.BUTTON1) this.leftButtonDown = false;
+        if (e.button === Mouse.BUTTON2) this.midButtonDown = false;
         this.onPointerUp.emit(event);
       }
     });
@@ -1213,6 +1228,13 @@ export class Editor {
   }
 
   /**
+   * Get cursor
+   */
+  getCursor() {
+    return this.canvasElement.style.cursor;
+  }
+
+  /**
    * Set cursor
    */
   setCursor(cursor: string, angle: number = 0) {
@@ -1240,6 +1262,7 @@ export class Editor {
   newDoc(): Doc {
     const doc = new Doc();
     const page = new Page();
+    page.name = "Page 1";
     doc.children.push(page);
     page.parent = doc;
     this.store.setRoot(doc);
@@ -1421,6 +1444,11 @@ export class Handler {
  */
 export class Controller {
   manipulator: Manipulator;
+
+  /**
+   * Indicates whether this controller has handles or not
+   */
+  hasHandle: boolean = false;
 
   /**
    * Indicates whether this controller is dragging or not
@@ -1670,9 +1698,9 @@ export class Controller {
   pointerUp(editor: Editor, shape: Shape, e: CanvasPointerEvent): boolean {
     let handled = false;
     if (e.button === Mouse.BUTTON1 && this.dragging) {
+      this.finalize(editor, shape);
       this.reset();
       handled = true;
-      this.finalize(editor, shape);
       editor.repaint();
       editor.onDragEnd.emit({
         controller: this,
@@ -1737,6 +1765,16 @@ export class Manipulator {
   mouseIn(editor: Editor, shape: Shape, e: CanvasPointerEvent): boolean {
     return this.controllers.some(
       (cp) => cp.active(editor, shape) && cp.mouseIn(editor, shape, e)
+    );
+  }
+
+  /**
+   * Returns true if mouse cursor is inside the controller's handles
+   */
+  mouseInHandles(editor: Editor, shape: Shape, e: CanvasPointerEvent): boolean {
+    return this.controllers.some(
+      (cp) =>
+        cp.hasHandle && cp.active(editor, shape) && cp.mouseIn(editor, shape, e)
     );
   }
 
